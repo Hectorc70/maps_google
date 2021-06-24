@@ -11,7 +11,11 @@ class MapSample extends StatefulWidget {
 }
 
 class MapSampleState extends State<MapSample> {
+  late GoogleMapController mapController;
   late Position _currentPosition;
+  late final _startAddress;
+  late final _destinationAddress =
+      "Avenida 18 oriente, 3209, Cristobal Colon, 72370";
 
   @override
   void initState() {
@@ -19,20 +23,13 @@ class MapSampleState extends State<MapSample> {
     _getCurrentLocation();
   }
 
-  Completer<GoogleMapController> _controller = Completer();
-
   static final CameraPosition _kGooglePlex = CameraPosition(
     target: LatLng(37.42796133580664, -122.085749655962),
     zoom: 14.4746,
   );
 
-  static final CameraPosition _kLake = CameraPosition(
-      bearing: 192.8334901395799,
-      target: LatLng(37.43296265331129, -122.08832357078792),
-      tilt: 59.440717697143555,
-      zoom: 19.151926040649414);
-
-  late GoogleMapController mapController;
+  //Guarda  marcadores
+  Set<Marker> markers = {};
 
   @override
   Widget build(BuildContext context) {
@@ -68,7 +65,14 @@ class MapSampleState extends State<MapSample> {
                 child: Icon(Icons.my_location),
               ),
               onTap: () async {
-                await _getCurrentLocation();
+                final coord = await _getAddressCoordinates();
+
+                  if (coord != null){
+                    await _movetoPosition(coord.latitude, coord.longitude);
+                  }
+                
+
+                
               },
             ),
           ),
@@ -79,7 +83,7 @@ class MapSampleState extends State<MapSample> {
     await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high)
         .then((Position position) async {
       setState(() {
-        // Store the position in the variable
+        // Guarda la  posicion en la variable
         _currentPosition = position;
 
         print('Mi Posicion: $_currentPosition');
@@ -96,4 +100,58 @@ class MapSampleState extends State<MapSample> {
       });
     });
   }
+
+  /*  _getAddress() async {
+    try {
+      List<Placemark> p = await (_destinationAddress);
+
+      Placemark addressData = p[0];
+
+      final _currentAddress =
+          "${addressData.name}, ${addressData.locality}, ${addressData.postalCode}, ${addressData.country}";
+
+
+      setState(() {});
+    } catch (e) {
+      print(e);
+    }
+  } */
+
+  Future<dynamic> _getAddressCoordinates() async {
+    try {
+      List<Location> locations = await locationFromAddress(_destinationAddress,
+          localeIdentifier: 'es_MX');
+
+      Location coords = locations[0];
+
+      return coords;
+    } catch (e) {
+      print(e);
+      return null;
+    }
+  }
+
+  _movetoPosition(latitude, longitude) {
+    mapController.animateCamera(
+      CameraUpdate.newCameraPosition(
+        CameraPosition(
+          target: LatLng(
+            // Will be fetching in the next step
+            latitude,
+            longitude,
+          ),
+          zoom: 18.0,
+        ),
+      ),
+    );
+  }
+
+  _drawMark( ){
+
+  }
+/*   _route_two_points(){
+    String startCoordinatesString = '($startLatitude, $startLongitude)';
+    String destinationCoordinatesString = '($destinationLatitude, $destinationLongitude)';
+  } */
+
 }
