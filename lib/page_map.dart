@@ -14,6 +14,7 @@ class MapSampleState extends State<MapSample> {
   late GoogleMapController mapController;
   late Position _currentPosition;
   late final _startAddress;
+  Set<Marker> markers = {};
   late final _destinationAddress =
       "Avenida 18 oriente, 3209, Cristobal Colon, 72370";
 
@@ -29,7 +30,6 @@ class MapSampleState extends State<MapSample> {
   );
 
   //Guarda  marcadores
-  Set<Marker> markers = {};
 
   @override
   Widget build(BuildContext context) {
@@ -38,6 +38,7 @@ class MapSampleState extends State<MapSample> {
         Scaffold(
           body: GoogleMap(
             mapType: MapType.normal,
+            markers: Set<Marker>.from(markers),
             myLocationEnabled: true,
             myLocationButtonEnabled: false,
             initialCameraPosition: _kGooglePlex,
@@ -67,12 +68,12 @@ class MapSampleState extends State<MapSample> {
               onTap: () async {
                 final coord = await _getAddressCoordinates();
 
-                  if (coord != null){
-                    await _movetoPosition(coord.latitude, coord.longitude);
-                  }
-                
+                if (coord != null) {
+                  String idMarker = '(${coord.latitude}, ${coord.longitude})';
 
-                
+                  await _movetoPosition(
+                      coord.latitude, coord.longitude, idMarker);
+                }
               },
             ),
           ),
@@ -88,6 +89,8 @@ class MapSampleState extends State<MapSample> {
 
         print('Mi Posicion: $_currentPosition');
 
+        _drawMark(position.latitude, position.longitude,
+            '(${position.latitude}, ${position.longitude})');
         // Mueve a posicion actual
         mapController.animateCamera(
           CameraUpdate.newCameraPosition(
@@ -131,7 +134,8 @@ class MapSampleState extends State<MapSample> {
     }
   }
 
-  _movetoPosition(latitude, longitude) {
+  _movetoPosition(latitude, longitude, startCoordinatesString) {
+    _drawMark(latitude, longitude, startCoordinatesString);
     mapController.animateCamera(
       CameraUpdate.newCameraPosition(
         CameraPosition(
@@ -146,8 +150,20 @@ class MapSampleState extends State<MapSample> {
     );
   }
 
-  _drawMark( ){
+  _drawMark(double latitudeM, double longitudeM, startCoordinatesString) {
+    Marker startMarker = Marker(
+      markerId: MarkerId(startCoordinatesString),
+      position: LatLng(latitudeM, longitudeM),
+      infoWindow: InfoWindow(
+        title: 'Start $startCoordinatesString',
+      ),
+      icon: BitmapDescriptor.defaultMarker,
+    );
 
+    setState(() {
+      markers.add(startMarker);
+    });
+    
   }
 /*   _route_two_points(){
     String startCoordinatesString = '($startLatitude, $startLongitude)';
