@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
@@ -17,6 +18,10 @@ class MapSampleState extends State<MapSample> {
   Set<Marker> markers = {};
   late final _destinationAddress =
       "Avenida 18 oriente, 3209, Cristobal Colon, 72370";
+
+  late PolylinePoints polylinePoints;
+  List<LatLng> polylineCoordinates = [];
+  Map<PolylineId, Polyline> polylines = {};
 
   @override
   void initState() {
@@ -39,6 +44,7 @@ class MapSampleState extends State<MapSample> {
           body: GoogleMap(
             mapType: MapType.normal,
             markers: Set<Marker>.from(markers),
+            polylines: Set<Polyline>.of(polylines.values),
             myLocationEnabled: true,
             myLocationButtonEnabled: false,
             initialCameraPosition: _kGooglePlex,
@@ -47,7 +53,16 @@ class MapSampleState extends State<MapSample> {
             },
           ),
         ),
-        button_my_location(),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            button_my_location(),
+            SizedBox(
+              width: 40.0,
+            ),
+            button_draw_route(),
+          ],
+        )
       ],
     );
   }
@@ -76,6 +91,34 @@ class MapSampleState extends State<MapSample> {
                 }
               },
             ),
+          ),
+        ));
+  }
+
+  Widget button_draw_route() {
+    return Container(
+        alignment: AlignmentDirectional.bottomCenter,
+        child: ClipOval(
+          child: Material(
+            color: Colors.red, // button color
+            child: InkWell(
+                splashColor: Colors.red[100], // inkwell color
+                child: SizedBox(
+                  width: 56,
+                  height: 56,
+                  child: Icon(Icons.alt_route),
+                ),
+                onTap: () async {
+                  final coord = await _getAddressCoordinates();
+
+                  if (coord != null) {
+                    drawRoute(
+                        _currentPosition.latitude,
+                        _currentPosition.longitude,
+                        coord.latitude,
+                        coord.longitude);
+                  }
+                }),
           ),
         ));
   }
@@ -134,7 +177,8 @@ class MapSampleState extends State<MapSample> {
     }
   }
 
-  _movetoPosition(latitude, longitude, startCoordinatesString) {
+  _movetoPosition(
+      double latitude, double longitude, String startCoordinatesString) {
     _drawMark(latitude, longitude, startCoordinatesString);
     mapController.animateCamera(
       CameraUpdate.newCameraPosition(
@@ -150,7 +194,8 @@ class MapSampleState extends State<MapSample> {
     );
   }
 
-  _drawMark(double latitudeM, double longitudeM, startCoordinatesString) {
+  _drawMark(
+      double latitudeM, double longitudeM, String startCoordinatesString) {
     Marker startMarker = Marker(
       markerId: MarkerId(startCoordinatesString),
       position: LatLng(latitudeM, longitudeM),
@@ -163,11 +208,42 @@ class MapSampleState extends State<MapSample> {
     setState(() {
       markers.add(startMarker);
     });
-    
   }
+
 /*   _route_two_points(){
     String startCoordinatesString = '($startLatitude, $startLongitude)';
     String destinationCoordinatesString = '($destinationLatitude, $destinationLongitude)';
   } */
+  drawRoute(
+    double startLatitude,
+    double startLongitude,
+    double destinationLatitude,
+    double destinationLongitude,
+  ) async {
+    polylinePoints = PolylinePoints();
 
+    PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
+        "",
+        PointLatLng(startLatitude, startLongitude),
+        PointLatLng(destinationLatitude, destinationLongitude),
+        travelMode: TravelMode.driving);
+
+    if (result.points.isNotEmpty) {
+      result.points.forEach((PointLatLng point) {
+        setState(() {
+          polylineCoordinates.add(LatLng(point.latitude, point.longitude));
+        });
+      });
+    }
+    PolylineId id = PolylineId('poly');
+
+    Polyline polyline = Polyline(
+      polylineId: id,
+      color: Colors.blue,
+      points: polylineCoordinates,
+      width: 3,
+    );
+
+    polylines[id] = polyline;
+  }
 }
